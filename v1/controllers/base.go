@@ -27,10 +27,12 @@ func (server *Server) InitDb(DbDriver, DbHost, DbPort, DbUser, DbName, DbPasswor
 }
 
 func (s *Server) InitRoutes() {
-	s.Router.HandleFunc("/", middlewares.SetMiddlewareJSON(s.Home)).Methods("GET")
+	s.Router.HandleFunc("/", middlewares.SetMiddlewareJSON(middlewares.SetMiddlewareAuthentication(s.Home))).Methods("GET")
 
 	s.Router.HandleFunc("/user/register", middlewares.SetMiddlewareJSON(s.Register)).Methods("POST")
-	//s.Router.HandleFunc("/user/login", middlewares.SetMiddlewareJSON(s.Login)).Methods("POST")
+	s.Router.HandleFunc("/user/login", middlewares.SetMiddlewareJSON(s.Login)).Methods("POST")
+	s.Router.HandleFunc("/user/refresh-token", middlewares.SetMiddlewareJSON(s.RefreshToken)).Methods("POST")
+	s.Router.HandleFunc("/test", middlewares.SetMiddlewareJSON(s.Test)).Methods("POST", "GET")
 
 	////Users routes
 

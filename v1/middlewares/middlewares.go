@@ -16,7 +16,7 @@ func SetMiddlewareJSON(httpHandler http.HandlerFunc) http.HandlerFunc {
 
 func SetMiddlewareAuthentication(httpHandler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := auth.TokenValid(r)
+		err := auth.TokenValidFromRequest(r)
 		if err != nil {
 			response.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
 			return

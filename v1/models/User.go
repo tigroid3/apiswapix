@@ -6,27 +6,27 @@ import (
 )
 
 type User struct {
-	ID                uint32 `gorm:"primary_key;auto_increment" json:"id"`
+	ID                uint64 `gorm:"primary_key;auto_increment" json:"id"`
 	Email             string `gorm:"size:64;not null;unique" json:"email"`
 	Name              string `gorm:"size:255;" json:"name"`
 	Social            bool   `gorm:"default:false;not null" json:"social"`
 	AutoPassword      bool   `gorm:"default:false;not null" json:"auto_password"`
 	Password          string `gorm:"size:64;" json:"password"`
-	Phone             string `gorm:"size:64" json:"phone"`
-	FacebookUrl       string `gorm:"size:255" json:"facebook_url"`
-	CountryId         int8   `gorm:"size:64" json:"country_id"`
-	LocationId        int8   `gorm:"default:null" json:"location_id"`
-	CompanyId         int8   `gorm:"default:null" json:"company_id"`
-	AuthKey           string `gorm:"size:32" json:"auth_key"`
-	Status            int8   `gorm:"not null" json:"status"`
+	Phone             string `gorm:"default:null;size:64" json:"phone"`
+	FacebookUrl       string `gorm:"default:null;size:255" json:"facebook_url"`
+	CountryId         int64  `gorm:"size:64" json:"country_id"`
+	LocationId        int64  `gorm:"default:null" json:"location_id"`
+	CompanyId         int64  `gorm:"default:null" json:"company_id"`
+	AuthKey           string `gorm:"default:null;size:32" json:"auth_key"`
+	Status            int64  `gorm:"not null" json:"status"`
 	EmailConfirm      bool   `gorm:"default:false" json:"email_confirm"`
 	EmailSubscription bool   `gorm:"default:true" json:"email_subscription"`
-	AddFrom           int8   `gorm:"not null" json:"add_from"`
-	Photo             string `gorm:"size:255" json:"photo"`
+	AddFrom           int64  `gorm:"not null" json:"add_from"`
+	Photo             string `gorm:"default:null;size:255" json:"photo"`
 	CreatedAt         int64  `gorm:"default:0;not null" json:"created_at"`
 	UpdatedAt         int64  `gorm:"default:0;not null" json:"updated_at"`
-	PhoneConfirm      int8   `gorm:"default:0;" json:"phone_confirm"`
-	LastVisitAt       int8   `gorm:"default:null;" json:"last_visit_at"`
+	PhoneConfirm      int16  `gorm:"default:0;" json:"phone_confirm"`
+	LastVisitAt       int32  `gorm:"default:null;" json:"last_visit_at"`
 }
 
 func (User) TableName() string {

@@ -1,10 +1,12 @@
 package auth
 
 import (
-	"encoding/json"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	jwt "github.com/dgrijalva/jwt-go"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,31 +14,60 @@ import (
 	"time"
 )
 
-func CreateToken(user_id uint32) (string, error) {
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
-	claims["user_id"] = user_id
-	claims["exp"] = time.Now().Add(time.Hour * 3).Unix() //Token expires after 3 hours
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(os.Getenv("API_SECRET")))
+func GenerateTokenPair(user_id uint64, passwordHash string) (map[string]string, error) {
+	tClaims := jwt.MapClaims{}
+	tClaims["authorized"] = true
+	tClaims["user_id"] = user_id
+	tClaims["exp"] = time.Now().Add(time.Second * 20).Unix() //Token expires after 3 hours
+	tWithClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, tClaims)
+	token, err := tWithClaims.SignedString([]byte(os.Getenv("API_SECRET")))
 
+	if err != nil {
+		return nil, err
+	}
+
+	rtClaims := jwt.MapClaims{}
+	rtClaims["user_id"] = user_id
+	rtClaims["secret"] = GenerateHmacForHashPassword(passwordHash)
+	rtClaims["exp"] = time.Now().Add(time.Hour * 24).Unix() //Token expires after 24 hours
+	rtWithClaims := jwt.NewWithClaims(jwt.SigningMethodHS256, rtClaims)
+	refreshToken, err := rtWithClaims.SignedString([]byte(os.Getenv("API_SECRET")))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]string{
+		"access_token":  token,
+		"refresh_token": refreshToken,
+	}, nil
 }
 
-func TokenValid(r *http.Request) error {
+func TokenValidFromRequest(r *http.Request) error {
 	tokenString := ExtractToken(r)
+	_, err := GetPayoutsFromToken(tokenString)
+
+	return err
+}
+
+func GetPayoutsFromToken(tokenString string) (map[string]interface{}, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(os.Getenv("API_SECRET")), nil
 	})
+
 	if err != nil {
-		return err
+		return nil, err
 	}
+
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		Pretty(claims)
+		return claims, nil
+	} else {
+		err = errors.New("Token is invalid")
+		return nil, err
 	}
-	return nil
 }
 
 func ExtractToken(r *http.Request) string {
@@ -53,7 +84,6 @@ func ExtractToken(r *http.Request) string {
 }
 
 func ExtractTokenID(r *http.Request) (uint32, error) {
-
 	tokenString := ExtractToken(r)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -75,13 +105,25 @@ func ExtractTokenID(r *http.Request) (uint32, error) {
 	return 0, nil
 }
 
-//Pretty display the claims licely in the terminal
-func Pretty(data interface{}) {
-	b, err := json.MarshalIndent(data, "", " ")
+func GenerateHmacForHashPassword(hashPassword string) string {
+	secret := os.Getenv("API_SECRET")
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(hashPassword))
+	expectedMAC := mac.Sum(nil)
+
+	return hex.EncodeToString(expectedMAC)
+}
+
+func EqualsHmacForHashPassword(encodedShaHashPassword, hashPassword string) (bool, error) {
+	hexDecoded, err := hex.DecodeString(encodedShaHashPassword)
 	if err != nil {
-		log.Println(err)
-		return
+		return false, err
 	}
 
-	fmt.Println(string(b))
+	secret := os.Getenv("API_SECRET")
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(hashPassword))
+	expectedMAC := mac.Sum(nil)
+
+	return hmac.Equal(hexDecoded, expectedMAC), nil
 }
