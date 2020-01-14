@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"errors"
 	"github.com/go-playground/validator/v10"
 	"github.com/tigroid3/apiswapix/v1/auth"
 	"github.com/tigroid3/apiswapix/v1/models"
@@ -103,9 +104,26 @@ func (server *Server) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		response.ERROR(w, http.StatusUnprocessableEntity, err)
 	}
 
-	//err = auth.GetPayoutsFromToken(rtForm.RefreshToken)
-	//if err != nil {
-	//	response.ERROR(w, http.StatusUnprocessableEntity, err)
-	//}
+	claims, err := auth.GetPayoutsFromToken(rtForm.RefreshToken)
+	if err != nil {
+		response.ERROR(w, http.StatusUnprocessableEntity, err)
+	}
 
+	user := models.User{}
+	err = server.DB.Debug().Model(models.User{}).Where("id = ?", claims["user_id"]).Take(&user).Error
+	if err != nil {
+		response.ERROR(w, http.StatusUnprocessableEntity, errors.New("User not found"))
+	}
+
+	err = auth.EqualsHmacForHashPassword(claims["secret"].(string), user.Password)
+	if err != nil {
+		response.ERROR(w, http.StatusUnprocessableEntity, err)
+	}
+
+	tokenPairs, err := auth.GenerateTokenPair(user.ID, user.Password)
+	if err != nil {
+		response.ERROR(w, http.StatusUnprocessableEntity, err)
+	}
+
+	response.JSON(w, http.StatusOK, tokenPairs)
 }

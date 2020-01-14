@@ -114,10 +114,10 @@ func GenerateHmacForHashPassword(hashPassword string) string {
 	return hex.EncodeToString(expectedMAC)
 }
 
-func EqualsHmacForHashPassword(encodedShaHashPassword, hashPassword string) (bool, error) {
+func EqualsHmacForHashPassword(encodedShaHashPassword, hashPassword string) error {
 	hexDecoded, err := hex.DecodeString(encodedShaHashPassword)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	secret := os.Getenv("API_SECRET")
@@ -125,5 +125,9 @@ func EqualsHmacForHashPassword(encodedShaHashPassword, hashPassword string) (boo
 	mac.Write([]byte(hashPassword))
 	expectedMAC := mac.Sum(nil)
 
-	return hmac.Equal(hexDecoded, expectedMAC), nil
+	if ok := hmac.Equal(hexDecoded, expectedMAC); !ok {
+		return errors.New("Password was changed")
+	}
+
+	return nil
 }
