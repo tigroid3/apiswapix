@@ -1,9 +1,12 @@
 package main
 
 import (
-	"github.com/tigroid3/apiswapix/v1"
+	"github.com/joho/godotenv"
+	"github.com/tigroid3/apiswapix/v4"
 )
 
 func main() {
-	v1.Run()
+	_ = godotenv.Load(".env")
+
+	v4.Run()
 }

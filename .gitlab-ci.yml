@@ -1,0 +1,19 @@
+stages:
+  - build
+
+variables:
+  REGISTRY_HOST: ""
+  REGISTRY_USERNAME: ""
+  REGISTRY_PASSWORD: ""
+
+Build:
+  stage: build
+  only:
+    refs:
+      - master
+  before_script:
+    - echo $REGISTRY_PASSWORD | docker login $REGISTRY_HOST -u $REGISTRY_USERNAME --password-stdin
+  script:
+    - docker build -t $CONTAINER_REGISTRY:latest
+    - docker push $CONTAINER_REGISTRY
+
